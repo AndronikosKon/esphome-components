@@ -1,6 +1,7 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.core import ID
+from esphome.components import esp32_ble
+from esphome.core import CORE, ID
 from esphome.const import (
     CONF_DURATION,
     CONF_ID,
@@ -268,9 +269,13 @@ class BleAdvRegistry:
         return cls.handler
 
 async def to_code(config):
+    if not getattr(BleAdvRegistry, "ble_initialized", False):
+        if "esp32_ble" not in CORE.config:
+            ble_config = esp32_ble.CONFIG_SCHEMA({esp32_ble.CONF_ADVERTISING: True})
+            await esp32_ble.to_code(ble_config)
+        BleAdvRegistry.ble_initialized = True
+
     hdl = BleAdvRegistry.get()
-    cg.add_define("USE_ESP32_BLE_ADVERTISING")
-    cg.add_define("USE_ESP32_BLE_UUID")
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await setup_entity(var, config, "ble_adv_controller")
