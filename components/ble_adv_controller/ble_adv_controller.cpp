@@ -186,3 +186,28 @@ void BleAdvEntity::command(CommandType cmd, uint8_t value1, uint8_t value2) {
 
 } // namespace bleadvcontroller
 } // namespace esphome
+
+// Weak fallback implementations of the template specializations normally defined in
+// esphome/components/api/user_services.cpp.  That file is excluded from the build
+// unless `custom_services: true` is set under `api:` in the YAML.  By providing
+// weak definitions here we satisfy the linker in both cases: when user_services.cpp
+// IS compiled its strong symbols win; when it is NOT compiled these are used.
+#ifdef USE_API
+namespace esphome {
+namespace api {
+
+template<> __attribute__((weak))
+float get_execute_arg_value<float>(const ExecuteServiceArgument &arg) { return arg.float_; }
+
+template<> __attribute__((weak))
+std::string get_execute_arg_value<std::string>(const ExecuteServiceArgument &arg) { return arg.string_; }
+
+template<> __attribute__((weak))
+enums::ServiceArgType to_service_arg_type<float>() { return enums::SERVICE_ARG_TYPE_FLOAT; }
+
+template<> __attribute__((weak))
+enums::ServiceArgType to_service_arg_type<std::string>() { return enums::SERVICE_ARG_TYPE_STRING; }
+
+}  // namespace api
+}  // namespace esphome
+#endif
