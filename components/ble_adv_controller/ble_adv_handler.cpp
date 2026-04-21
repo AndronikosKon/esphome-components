@@ -2,6 +2,9 @@
 #include "esphome/core/log.h"
 #include "esphome/core/hal.h"
 
+#include <esp_bt.h>
+#include <esp_bt_main.h>
+
 #ifdef USE_ESP32_BLE_CLIENT
 #include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
 #endif
@@ -154,6 +157,8 @@ void BleAdvHandler::setup() {
 #ifdef USE_API
   register_service(&BleAdvHandler::on_raw_decode, "raw_decode", {"raw"});
 #endif
+  ESP_LOGCONFIG(TAG, "BLE controller status: %d", esp_bt_controller_get_status());
+  ESP_LOGCONFIG(TAG, "Bluedroid status: %d", esp_bluedroid_get_status());
 }
 
 void BleAdvHandler::add_encoder(BleAdvEncoder * encoder) { 
@@ -312,8 +317,14 @@ void BleAdvHandler::loop() {
     // if packets to be advertised, advertise the front one
     if (!this->packets_.empty()) {
       BleAdvParam & packet = this->packets_.front().param_;
-      ESP_ERROR_CHECK_WITHOUT_ABORT(esp_ble_gap_config_adv_data_raw(packet.get_full_buf(), packet.get_full_len()));
-      ESP_ERROR_CHECK_WITHOUT_ABORT(esp_ble_gap_start_advertising(&(this->adv_params_)));
+      esp_err_t err = esp_ble_gap_config_adv_data_raw(packet.get_full_buf(), packet.get_full_len());
+      if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ble_gap_config_adv_data_raw failed: %s (%d)", esp_err_to_name(err), err);
+      }
+      err = esp_ble_gap_start_advertising(&(this->adv_params_));
+      if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ble_gap_start_advertising failed: %s (%d)", esp_err_to_name(err), err);
+      }
       this->adv_stop_time_ = millis() + this->packets_.front().param_.duration_;
       this->packets_.front().processed_once_ = true;
     }
@@ -324,7 +335,10 @@ void BleAdvHandler::loop() {
     bool multi_packets = (this->packets_.size() > 1);
     bool front_to_be_removed = this->packets_.front().to_be_removed_;
     if ((millis() > this->adv_stop_time_) && (multi_packets || front_to_be_removed)) {
-      ESP_ERROR_CHECK_WITHOUT_ABORT(esp_ble_gap_stop_advertising());
+      esp_err_t err = esp_ble_gap_stop_advertising();
+      if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ble_gap_stop_advertising failed: %s (%d)", esp_err_to_name(err), err);
+      }
       this->adv_stop_time_ = 0;
       if (front_to_be_removed) {
         this->packets_.pop_front();
