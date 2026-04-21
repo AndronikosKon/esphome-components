@@ -274,6 +274,8 @@ async def to_code(config):
     cg.add(var.set_setup_priority(300)) # start after Bluetooth
     await cg.register_component(var, config)
     await setup_entity(var, config, "ble_adv_controller")
+    # This component uses register_service() which requires custom_services support
+    cg.add_define("USE_API_CUSTOM_SERVICES")
     cg.add(var.set_handler(hdl))
     cg.add(var.set_encoding_and_variant(config[CONF_BLE_ADV_ENCODING], config[CONF_VARIANT]))
     cg.add(var.set_min_tx_duration(config[CONF_DURATION], 100, 500, 10))

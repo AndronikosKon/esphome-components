@@ -25,11 +25,12 @@ public:
   void init(const char * name, const StringRef & parent_name) {
     // Due to the use of sh... StringRef, we are forced to keep a ref on the built string...
     this->ref_name_ = std::string(parent_name) + " - " + std::string(name);
-    this->set_object_id(this->ref_name_.c_str());
-    this->set_name(this->ref_name_.c_str());
-    this->set_entity_category(EntityCategory::ENTITY_CATEGORY_CONFIG);
+    // configure_entity_ sets name, object_id_hash and flags in one call.
+    // ENTITY_FIELD_ENTITY_CATEGORY_SHIFT (26) encodes EntityCategory in entity_fields bitmap.
+    uint32_t entity_fields = (static_cast<uint32_t>(ENTITY_CATEGORY_CONFIG) << ENTITY_FIELD_ENTITY_CATEGORY_SHIFT);
+    uint32_t hash = fnv1_hash_object_id(this->ref_name_.c_str(), this->ref_name_.size());
+    this->configure_entity_(this->ref_name_.c_str(), hash, entity_fields);
     this->sub_init();
-    this->publish_state(this->state);
   }
 
   // register to App and restore from config / saved data
@@ -44,9 +45,23 @@ protected:
   BleAdvSelect: basic implementation of 'Select' to handle configuration choice from HA directly
  */
 class BleAdvSelect: public BleAdvDynConfig < select::Select > {
+public:
+  // Store the option strings and populate SelectTraits (const char* pointers remain valid
+  // for the lifetime of this object because options_strings_ keeps the std::strings alive).
+  void set_option_strings(std::vector<std::string> opts) {
+    this->options_strings_ = std::move(opts);
+    FixedVector<const char *> fv;
+    fv.init(this->options_strings_.size());
+    for (const auto &s : this->options_strings_) {
+      fv.push_back(s.c_str());
+    }
+    this->traits.set_options(fv);
+  }
+
 protected:
   void control(const std::string &value) override;
   void sub_init() override;
+  std::vector<std::string> options_strings_;
 };
 
 /**
@@ -90,7 +105,7 @@ public:
   bool is_show_config() { return this->show_config_; }
 
   void set_handler(BleAdvHandler * handler) { this->handler_ = handler; }
-  void refresh_encoder(std::string id, size_t index);
+  void refresh_encoder(size_t index);
 
 #ifdef USE_API
   // Services
