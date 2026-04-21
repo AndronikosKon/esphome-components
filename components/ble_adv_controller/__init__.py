@@ -1,5 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
+import esphome.final_validate as fv
 from esphome.core import ID
 from esphome.const import (
     CONF_DURATION,
@@ -229,6 +230,25 @@ def validate_forced_id(config):
         raise cv.Invalid("Invalid 'forced_id' for %s - %s: %s. Maximum: 0x%X." % (encoding, variant, forced_id, max_forced_id))
     return config
 
+
+def final_validate_ble_advertising(config):
+    full_config = fv.full_config.get()
+    ble_config = full_config.get("esp32_ble")
+
+    if ble_config is None:
+        raise cv.Invalid(
+            "ble_adv_controller requires an explicit 'esp32_ble:' section with 'advertising: true'. "
+            "ESPHome 2026.4.1 no longer enables BLE advertising implicitly for this component."
+        )
+
+    if not ble_config.get("advertising", False):
+        raise cv.Invalid(
+            "ble_adv_controller requires 'esp32_ble: advertising: true'. "
+            "Without it, esp_ble_gap_start_advertising() stays in INVALID_STATE and no packets are transmitted."
+        )
+
+    return config
+
 CONFIG_SCHEMA = cv.All(
     cv.Any(
         *[ CONTROLLER_BASE_CONFIG.extend(
@@ -243,6 +263,8 @@ CONFIG_SCHEMA = cv.All(
     validate_legacy_variant,
     cv.only_on([PLATFORM_ESP32]),
 )
+
+FINAL_VALIDATE_SCHEMA = final_validate_ble_advertising
 
 async def entity_base_code_gen(var, config, platform):
     await cg.register_parented(var, config[CONF_BLE_ADV_CONTROLLER_ID])
