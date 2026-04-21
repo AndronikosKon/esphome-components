@@ -1,6 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.core import ID, CORE
+from esphome.core import ID
 from esphome.const import (
     CONF_DURATION,
     CONF_ID,
@@ -272,12 +272,8 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await setup_entity(var, config, "ble_adv_controller")
-    # This component uses register_service() which requires custom_services support.
-    # Force custom_services=True in the API config so user_services.cpp is compiled
-    # (ESPHome's FILTER_SOURCE_FILES excludes it otherwise).
-    api_config = CORE.config.get("api")
-    if api_config is not None:
-        api_config["custom_services"] = True
+    # This component uses register_service() which requires 'custom_services: true'
+    # in the 'api:' section of the YAML configuration.
     cg.add_define("USE_API_USER_DEFINED_ACTIONS")
     cg.add_define("USE_API_CUSTOM_SERVICES")
     cg.add(var.set_handler(hdl))
