@@ -252,6 +252,8 @@ async def entity_base_code_gen(var, config, platform):
 
 class BleAdvRegistry:
     handler = None
+    ble_config = None
+    gap_registered = False
     @classmethod
     def get(cls):
         if not cls.handler:
@@ -271,11 +273,18 @@ class BleAdvRegistry:
 async def to_code(config):
     if not getattr(BleAdvRegistry, "ble_initialized", False):
         if "esp32_ble" not in CORE.config:
-            ble_config = esp32_ble.CONFIG_SCHEMA({esp32_ble.CONF_ADVERTISING: True})
-            await esp32_ble.to_code(ble_config)
+            BleAdvRegistry.ble_config = esp32_ble.CONFIG_SCHEMA({esp32_ble.CONF_ADVERTISING: True})
+            await esp32_ble.to_code(BleAdvRegistry.ble_config)
         BleAdvRegistry.ble_initialized = True
 
     hdl = BleAdvRegistry.get()
+    if not BleAdvRegistry.gap_registered:
+        ble_config = CORE.config.get("esp32_ble", BleAdvRegistry.ble_config)
+        if ble_config is not None:
+            ble_parent = await cg.get_variable(ble_config[CONF_ID])
+            esp32_ble.register_gap_event_handler(ble_parent, hdl)
+            BleAdvRegistry.gap_registered = True
+
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await setup_entity(var, config, "ble_adv_controller")

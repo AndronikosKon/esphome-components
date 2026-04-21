@@ -161,6 +161,22 @@ void BleAdvHandler::setup() {
   ESP_LOGCONFIG(TAG, "Bluedroid status: %d", esp_bluedroid_get_status());
 }
 
+void BleAdvHandler::gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param) {
+  switch (event) {
+    case ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT:
+      ESP_LOGD(TAG, "ADV_DATA_RAW_SET_COMPLETE status=%d", param->adv_data_raw_cmpl.status);
+      break;
+    case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
+      ESP_LOGD(TAG, "ADV_START_COMPLETE status=%d", param->adv_start_cmpl.status);
+      break;
+    case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
+      ESP_LOGD(TAG, "ADV_STOP_COMPLETE status=%d", param->adv_stop_cmpl.status);
+      break;
+    default:
+      break;
+  }
+}
+
 void BleAdvHandler::add_encoder(BleAdvEncoder * encoder) { 
   BleAdvMultiEncoder * enc_all = nullptr;
   auto all_enc = std::find_if(this->encoders_.begin(), this->encoders_.end(), 

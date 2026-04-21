@@ -201,6 +201,7 @@ public:
   // component handling
   void setup() override;
   void loop() override;
+  void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 
   // Encoder registration and access
   void add_encoder(BleAdvEncoder * encoder);
